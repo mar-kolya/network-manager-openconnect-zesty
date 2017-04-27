@@ -1,4 +1,5 @@
 usr/lib/*/NetworkManager/*.so
 usr/lib/NetworkManager/nm-openconnect-auth-dialog
+usr/lib/NetworkManager/nm-openconnect-auth-firefox
 usr/share/gnome-vpn-properties
 usr/share/locale

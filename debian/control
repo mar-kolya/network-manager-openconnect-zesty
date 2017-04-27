@@ -24,6 +24,8 @@ Architecture: any
 Depends: adduser,
          network-manager (>= 1.2),
          openconnect,
+         python-gi,
+         gir1.2-networkmanager-1.0,
          ${misc:Depends},
          ${shlibs:Depends}
 Description: network management framework (OpenConnect plugin core)
