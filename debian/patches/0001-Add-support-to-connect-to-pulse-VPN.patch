@@ -1,0 +1,546 @@
+From: Nikolay Martynov <mar.kolya@gmail.com>
+Date: Thu, 27 Apr 2017 19:25:10 -0400
+Subject: Add support to connect to pulse VPN
+
+---
+ auth-dialog/Makefile.am                   |   2 +
+ auth-dialog/main.c                        |  11 ++
+ po/en_GB.po                               |  12 ++
+ properties/nm-openconnect-dialog.ui       | 175 +++++++++++++++++++++++++++++-
+ properties/nm-openconnect-editor-plugin.c |  36 ++++++
+ properties/nm-openconnect-editor.c        |  48 ++++++++
+ shared/nm-service-defines.h               |   3 +
+ src/nm-openconnect-service.c              |  14 ++-
+ 8 files changed, 296 insertions(+), 5 deletions(-)
+
+diff --git a/auth-dialog/Makefile.am b/auth-dialog/Makefile.am
+index 96a651c..b9fc086 100644
+--- a/auth-dialog/Makefile.am
++++ b/auth-dialog/Makefile.am
+@@ -1,4 +1,5 @@
+ libexec_PROGRAMS = nm-openconnect-auth-dialog
++libexec_SCRIPTS = nm-openconnect-auth-firefox
+ 
+ nm_openconnect_auth_dialog_CPPFLAGS = \
+ 	$(LIBNM_CFLAGS) \
+@@ -9,6 +10,7 @@ nm_openconnect_auth_dialog_CPPFLAGS = \
+ 	$(LIBSECRET_CFLAGS) \
+ 	-DICONDIR=\""$(datadir)/pixmaps"\" \
+ 	-DBINDIR=\""$(bindir)"\" \
++	-DLIBEXECDIR=\""$(libexecdir)"\" \
+ 	-DGNOMELOCALEDIR=\"$(datadir)/locale\" \
+ 	-I"$(top_srcdir)/shared" \
+ 	$(NULL)
+diff --git a/auth-dialog/main.c b/auth-dialog/main.c
+index 9c95624..594437d 100644
+--- a/auth-dialog/main.c
++++ b/auth-dialog/main.c
+@@ -84,6 +84,8 @@
+ 
+ #define AUTOSUBMIT_LIMIT 5
+ 
++#define NM_OPENCONNECT_AUTH_FIREFOX LIBEXECDIR"/nm-openconnect-auth-firefox"
++
+ static const SecretSchema openconnect_secret_schema = {
+ 	"org.freedesktop.NetworkManager.Connection.Openconnect",
+ 	SECRET_SCHEMA_DONT_MATCH_NAME,
+@@ -1646,6 +1648,7 @@ int main (int argc, char **argv)
+ 	GThread *init_thread;
+ 	gchar *key, *value;
+ 	int opt;
++	gchar *firefox;
+ 
+ 	while ((opt = getopt_long(argc, argv, "ru:n:s:i", long_options, NULL))) {
+ 		if (opt < 0)
+@@ -1703,6 +1706,14 @@ int main (int argc, char **argv)
+ 		return 1;
+ 	}
+ 
++	/* Run firefox authentication if requested
++	 * FIXME: I'm not proud of this code, but it seems to get the job
++	 * done. It's also linux specific */
++	firefox = g_hash_table_lookup(options, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
++	if (firefox && !strcmp(firefox, "yes")) {
++		execl(NM_OPENCONNECT_AUTH_FIREFOX, NM_OPENCONNECT_AUTH_FIREFOX, vpn_uuid, NULL);
++	}
++
+ 	gtk_init(0, NULL);
+ 
+ 	_ui_data = init_ui_data(vpn_name, options, secrets, vpn_uuid);
+diff --git a/po/en_GB.po b/po/en_GB.po
+index 778e045..4a1c532 100644
+--- a/po/en_GB.po
++++ b/po/en_GB.po
+@@ -5073,11 +5073,23 @@ msgstr "_Gateway:"
+ msgid "_Proxy:"
+ msgstr "_Proxy:"
+ 
++#: ../properties/nm-openconnect-dialog.ui.h:5
++msgid "User _Agent:"
++msgstr ""
++
+ #: ../properties/nm-openconnect-dialog.ui.h:6
+ msgid "CA C_ertificate:"
+ msgstr ""
+ 
+ #: ../properties/nm-openconnect-dialog.ui.h:7
++msgid "Use _Firefox for authentication"
++msgstr ""
++
++#: ../properties/nm-openconnect-dialog.ui.h:7
++msgid "Firefox _profile (must have mozrepl plugin installed):"
++msgstr ""
++
++#: ../properties/nm-openconnect-dialog.ui.h:7
+ msgid "Allow Cisco Secure Desktop _trojan"
+ msgstr "Allow Cisco Secure Desktop _trojan"
+ 
+diff --git a/properties/nm-openconnect-dialog.ui b/properties/nm-openconnect-dialog.ui
+index 28283ba..1fb12bd 100644
+--- a/properties/nm-openconnect-dialog.ui
++++ b/properties/nm-openconnect-dialog.ui
+@@ -53,7 +53,7 @@
+                 <child>
+                   <object class="GtkTable" id="table2">
+                     <property name="visible">True</property>
+-                    <property name="n_rows">4</property>
++                    <property name="n_rows">5</property>
+                     <property name="n_columns">2</property>
+                     <property name="homogeneous">False</property>
+                     <property name="row_spacing">6</property>
+@@ -70,17 +70,17 @@
+                         <property name="left_padding">0</property>
+                         <property name="right_padding">0</property>
+                         <child>
+-			  <object class="GtkComboBox" id="protocol_combo">
++                          <object class="GtkComboBox" id="protocol_combo">
+                             <property name="visible">True</property>
+                             <property name="model">protocol_combo_list</property>
+                             <property name="active">0</property>
+                             <child>
+                               <object class="GtkCellRendererText" id="renderer"/>
+                               <attributes>
+-				<attribute name="text">0</attribute>
++                                <attribute name="text">0</attribute>
+                               </attributes>
+                             </child>
+-			  </object>
++                          </object>
+                         </child>
+                       </object>
+                       <packing>
+@@ -158,6 +158,39 @@
+                       </packing>
+                     </child>
+                     <child>
++                      <object class="GtkAlignment" id="alignment18">
++                        <property name="visible">True</property>
++                        <property name="xalign">1</property>
++                        <property name="yalign">0.5</property>
++                        <property name="xscale">0</property>
++                        <property name="yscale">1</property>
++                        <property name="top_padding">0</property>
++                        <property name="bottom_padding">0</property>
++                        <property name="left_padding">0</property>
++                        <property name="right_padding">0</property>
++                        <child>
++                          <object class="GtkEntry" id="user_agent_entry">
++                            <property name="visible">True</property>
++                            <property name="can_focus">True</property>
++                            <property name="editable">True</property>
++                            <property name="visibility">True</property>
++                            <property name="max_length">0</property>
++                            <property name="text" translatable="yes"/>
++                            <property name="has_frame">True</property>
++                            <property name="invisible_char">&#x2022;</property>
++                            <property name="activates_default">False</property>
++                          </object>
++                        </child>
++                      </object>
++                      <packing>
++                        <property name="left_attach">1</property>
++                        <property name="right_attach">2</property>
++                        <property name="top_attach">4</property>
++                        <property name="bottom_attach">5</property>
++                        <property name="x_options">fill</property>
++                      </packing>
++                    </child>
++                    <child>
+                       <object class="GtkAlignment" id="alignment12">
+                         <property name="visible">True</property>
+                         <property name="xalign">1</property>
+@@ -270,6 +303,33 @@
+                       </packing>
+                     </child>
+                     <child>
++                      <object class="GtkLabel" id="label30">
++                        <property name="visible">True</property>
++                        <property name="label" translatable="yes">User _Agent:</property>
++                        <property name="use_underline">True</property>
++                        <property name="use_markup">False</property>
++                        <property name="justify">GTK_JUSTIFY_LEFT</property>
++                        <property name="wrap">False</property>
++                        <property name="selectable">False</property>
++                        <property name="xalign">0</property>
++                        <property name="yalign">0.5</property>
++                        <property name="xpad">0</property>
++                        <property name="ypad">0</property>
++                        <property name="mnemonic_widget">proxy_entry</property>
++                        <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
++                        <property name="width_chars">-1</property>
++                        <property name="single_line_mode">False</property>
++                        <property name="angle">0</property>
++                      </object>
++                      <packing>
++                        <property name="left_attach">0</property>
++                        <property name="right_attach">1</property>
++                        <property name="top_attach">4</property>
++                        <property name="bottom_attach">5</property>
++                        <property name="y_options"/>
++                      </packing>
++                    </child>
++                    <child>
+                       <object class="GtkLabel" id="label27">
+                         <property name="visible">True</property>
+                         <property name="label" translatable="yes">CA C_ertificate:</property>
+@@ -306,6 +366,113 @@
+               </packing>
+             </child>
+             <child>
++              <object class="GtkCheckButton" id="firefox_button">
++                <property name="border_width">2</property>
++                <property name="visible">True</property>
++                <property name="can_focus">True</property>
++                <property name="label" translatable="yes">Use _Firefox for authentication</property>
++                <property name="use_underline">True</property>
++                <property name="relief">GTK_RELIEF_NORMAL</property>
++                <property name="focus_on_click">True</property>
++                <property name="active">False</property>
++                <property name="inconsistent">False</property>
++                <property name="draw_indicator">True</property>
++              </object>
++              <packing>
++                <property name="padding">0</property>
++                <property name="expand">False</property>
++                <property name="fill">False</property>
++              </packing>
++            </child>
++            <child>
++              <object class="GtkAlignment" id="alignment19">
++                <property name="visible">True</property>
++                <property name="xalign">0.5</property>
++                <property name="yalign">0.5</property>
++                <property name="xscale">1</property>
++                <property name="yscale">1</property>
++                <property name="top_padding">0</property>
++                <property name="bottom_padding">0</property>
++                <property name="left_padding">12</property>
++                <property name="right_padding">0</property>
++                <child>
++                  <object class="GtkTable" id="table5">
++                    <property name="visible">True</property>
++                    <property name="n_rows">1</property>
++                    <property name="n_columns">2</property>
++                    <property name="homogeneous">False</property>
++                    <property name="row_spacing">6</property>
++                    <property name="column_spacing">6</property>
++                    <child>
++                      <object class="GtkAlignment" id="alignment20">
++                        <property name="visible">True</property>
++                        <property name="xalign">1</property>
++                        <property name="yalign">0.5</property>
++                        <property name="xscale">0</property>
++                        <property name="yscale">1</property>
++                        <property name="top_padding">0</property>
++                        <property name="bottom_padding">0</property>
++                        <property name="left_padding">0</property>
++                        <property name="right_padding">0</property>
++                        <child>
++                          <object class="GtkEntry" id="firefox_profile_entry">
++                            <property name="visible">True</property>
++                            <property name="can_focus">True</property>
++                            <property name="editable">True</property>
++                            <property name="visibility">True</property>
++                            <property name="max_length">0</property>
++                            <property name="text" translatable="yes"/>
++                            <property name="has_frame">True</property>
++                            <property name="invisible_char">&#x2022;</property>
++                            <property name="activates_default">False</property>
++                          </object>
++                        </child>
++                      </object>
++                      <packing>
++                        <property name="left_attach">1</property>
++                        <property name="right_attach">2</property>
++                        <property name="top_attach">0</property>
++                        <property name="bottom_attach">1</property>
++                        <property name="y_options"/>
++                      </packing>
++                    </child>
++                    <child>
++                      <object class="GtkLabel" id="label31">
++                        <property name="visible">True</property>
++                        <property name="label" translatable="yes">Firefox _profile (must have mozrepl plugin installed):</property>
++                        <property name="use_underline">True</property>
++                        <property name="use_markup">False</property>
++                        <property name="justify">GTK_JUSTIFY_LEFT</property>
++                        <property name="wrap">False</property>
++                        <property name="selectable">False</property>
++                        <property name="xalign">0</property>
++                        <property name="yalign">0.5</property>
++                        <property name="xpad">0</property>
++                        <property name="ypad">0</property>
++                        <property name="mnemonic_widget">gateway_entry</property>
++                        <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
++                        <property name="width_chars">-1</property>
++                        <property name="single_line_mode">False</property>
++                        <property name="angle">0</property>
++                      </object>
++                      <packing>
++                        <property name="left_attach">0</property>
++                        <property name="right_attach">1</property>
++                        <property name="top_attach">0</property>
++                        <property name="bottom_attach">1</property>
++                        <property name="y_options"/>
++                      </packing>
++                    </child>
++                  </object>
++                </child>
++              </object>
++              <packing>
++                <property name="padding">0</property>
++                <property name="expand">True</property>
++                <property name="fill">True</property>
++              </packing>
++            </child>
++            <child>
+               <object class="GtkCheckButton" id="csd_button">
+                 <property name="border_width">2</property>
+                 <property name="visible">True</property>
+diff --git a/properties/nm-openconnect-editor-plugin.c b/properties/nm-openconnect-editor-plugin.c
+index f578000..eef4498 100644
+--- a/properties/nm-openconnect-editor-plugin.c
++++ b/properties/nm-openconnect-editor-plugin.c
+@@ -168,6 +168,21 @@ import (NMVpnEditorPlugin *iface, const char *path, GError **error)
+ 	if (buf)
+ 		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PROXY, buf);
+ 
++	/* User Agent String */
++	buf = g_key_file_get_string (keyfile, "openconnect", "UserAgent", NULL);
++	if (buf)
++		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_USER_AGENT, buf);
++
++	/* Firefox authentication */
++	bval = g_key_file_get_boolean (keyfile, "openconnect", "FirefoxEnable", NULL);
++	if (bval)
++		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE, "yes");
++
++	/* Firefox profile */
++	bval = g_key_file_get_boolean (keyfile, "openconnect", "FirefoxProfile", NULL);
++	if (bval)
++		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_PROFILE, buf);
++
+ 	/* Cisco Secure Desktop */
+ 	bval = g_key_file_get_boolean (keyfile, "openconnect", "CSDEnable", NULL);
+ 	if (bval)
+@@ -219,6 +234,9 @@ export (NMVpnEditorPlugin *iface,
+ 	const char *cacert = NULL;
+ 	const char *protocol = NULL;
+ 	const char *proxy = NULL;
++	const char *user_agent = NULL;
++	gboolean firefox_enable = FALSE;
++	const char *firefox_profile = NULL;
+ 	gboolean csd_enable = FALSE;
+ 	const char *csd_wrapper = NULL;
+ 	const char *usercert = NULL;
+@@ -265,6 +283,18 @@ export (NMVpnEditorPlugin *iface,
+ 	if (value && strlen (value))
+ 		proxy = value;
+ 
++	value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_USER_AGENT);
++	if (value && strlen (value))
++		user_agent = value;
++
++	value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
++	if (value && !strcmp (value, "yes"))
++		firefox_enable = TRUE;
++
++	value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_PROFILE);
++	if (value && !strcmp (value, "yes"))
++		firefox_profile = value;
++
+ 	value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_CSD_ENABLE);
+ 	if (value && !strcmp (value, "yes"))
+ 		csd_enable = TRUE;
+@@ -305,6 +335,9 @@ export (NMVpnEditorPlugin *iface,
+ 		 "CACert=%s\n"
+ 		 "Protocol=%s\n"
+ 		 "Proxy=%s\n"
++		 "UserAgent=%s\n"
++		 "FirefoxEnable=%s\n"
++		 "FirefoxProfile=%s\n"
+ 		 "CSDEnable=%s\n"
+ 		 "CSDWrapper=%s\n"
+ 		 "UserCertificate=%s\n"
+@@ -317,6 +350,9 @@ export (NMVpnEditorPlugin *iface,
+ 		 /* CA Certificate */        cacert,
+ 		 /* Protocol */              protocol ? protocol : "anyconnect",
+ 		 /* Proxy */                 proxy ? proxy : "",
++		 /* User agent */            user_agent ? user_agent : "",
++		 /* Firefox auth */          firefox_enable ? "1" : "0",
++ 		 /* Firefox profile */       firefox_profile ? "1" : "0",
+ 		 /* Cisco Secure Desktop */  csd_enable ? "1" : "0",
+ 		 /* CSD Wrapper Script */    csd_wrapper ? csd_wrapper : "",
+ 		 /* User Certificate */      usercert,
+diff --git a/properties/nm-openconnect-editor.c b/properties/nm-openconnect-editor.c
+index f6cdb45..ec1f994 100644
+--- a/properties/nm-openconnect-editor.c
++++ b/properties/nm-openconnect-editor.c
+@@ -316,6 +316,16 @@ init_editor_plugin (OpenconnectEditor *self, NMConnection *connection, GError **
+ 	}
+ 	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
+ 
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user_agent_entry"));
++	if (!widget)
++		return FALSE;
++	if (s_vpn) {
++		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_USER_AGENT);
++		if (value)
++			gtk_entry_set_text (GTK_ENTRY (widget), value);
++	}
++	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
++
+ 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "fsid_button"));
+ 	if (!widget)
+ 		return FALSE;
+@@ -326,6 +336,26 @@ init_editor_plugin (OpenconnectEditor *self, NMConnection *connection, GError **
+ 	}
+ 	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
+ 
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "firefox_button"));
++	if (!widget)
++		return FALSE;
++	if (s_vpn) {
++		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
++		if (value && !strcmp(value, "yes"))
++			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON (widget), TRUE);
++	}
++	g_signal_connect (G_OBJECT (widget), "toggled", G_CALLBACK (stuff_changed_cb), self);
++
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "firefox_profile_entry"));
++	if (!widget)
++		return FALSE;
++	if (s_vpn) {
++		value = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_PROFILE);
++		if (value)
++			gtk_entry_set_text (GTK_ENTRY (widget), value);
++	}
++	g_signal_connect (G_OBJECT (widget), "changed", G_CALLBACK (stuff_changed_cb), self);
++
+ 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "csd_button"));
+ 	if (!widget)
+ 		return FALSE;
+@@ -412,10 +442,28 @@ update_connection (NMVpnEditor *iface,
+ 	if (str && strlen (str))
+ 		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PROXY, str);
+ 
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "user_agent_entry"));
++	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
++	if (str && strlen (str))
++		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_USER_AGENT, str);
++
+ 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "fsid_button"));
+ 	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
+ 	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PEM_PASSPHRASE_FSID, str);
+ 
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "prevent_invalid_cert_button"));
++	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
++	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PREVENT_INVALID_CERT, str);
++
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "firefox_button"));
++	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
++	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE, str);
++
++	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "firefox_profile_entry"));
++	str = (char *) gtk_entry_get_text (GTK_ENTRY (widget));
++	if (str && strlen (str))
++		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_PROFILE, str);
++
+ 	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "csd_button"));
+ 	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
+ 	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_CSD_ENABLE, str);
+diff --git a/shared/nm-service-defines.h b/shared/nm-service-defines.h
+index 08fca3b..461be82 100644
+--- a/shared/nm-service-defines.h
++++ b/shared/nm-service-defines.h
+@@ -42,6 +42,9 @@
+ #define NM_OPENCONNECT_KEY_PEM_PASSPHRASE_FSID "pem_passphrase_fsid"
+ #define NM_OPENCONNECT_KEY_PROTOCOL "protocol"
+ #define NM_OPENCONNECT_KEY_PROXY "proxy"
++#define NM_OPENCONNECT_KEY_USER_AGENT "user_agent"
++#define NM_OPENCONNECT_KEY_FIREFOX_ENABLE "enable_firefox_auth"
++#define NM_OPENCONNECT_KEY_FIREFOX_PROFILE "firefox_profile"
+ #define NM_OPENCONNECT_KEY_CSD_ENABLE "enable_csd_trojan"
+ #define NM_OPENCONNECT_KEY_CSD_WRAPPER "csd_wrapper"
+ #define NM_OPENCONNECT_KEY_TOKEN_MODE "stoken_source"
+diff --git a/src/nm-openconnect-service.c b/src/nm-openconnect-service.c
+index dc82a9f..2a85640 100644
+--- a/src/nm-openconnect-service.c
++++ b/src/nm-openconnect-service.c
+@@ -88,8 +88,11 @@ static const ValidProperty valid_properties[] = {
+ 	{ NM_OPENCONNECT_KEY_PEM_PASSPHRASE_FSID, G_TYPE_BOOLEAN, 0, 0 },
+ 	{ NM_OPENCONNECT_KEY_PROTOCOL,    G_TYPE_STRING, 0, 0 },
+ 	{ NM_OPENCONNECT_KEY_PROXY,       G_TYPE_STRING, 0, 0 },
++	{ NM_OPENCONNECT_KEY_FIREFOX_ENABLE, G_TYPE_BOOLEAN, 0, 0 },
++	{ NM_OPENCONNECT_KEY_FIREFOX_PROFILE, G_TYPE_STRING, 0, 0 },
+ 	{ NM_OPENCONNECT_KEY_CSD_ENABLE,  G_TYPE_BOOLEAN, 0, 0 },
+ 	{ NM_OPENCONNECT_KEY_CSD_WRAPPER, G_TYPE_STRING, 0, 0 },
++	{ NM_OPENCONNECT_KEY_USER_AGENT,  G_TYPE_STRING, 0, 0 },
+ 	{ NM_OPENCONNECT_KEY_TOKEN_MODE,  G_TYPE_STRING, 0, 0 },
+ 	{ NM_OPENCONNECT_KEY_TOKEN_SECRET, G_TYPE_STRING, 0, 0 },
+ 	{ NULL,                           G_TYPE_NONE, 0, 0 }
+@@ -390,7 +393,8 @@ nm_openconnect_start_openconnect_binary (NMOpenconnectPlugin *plugin,
+ 	GPtrArray *openconnect_argv;
+ 	GSource *openconnect_watch;
+ 	gint	stdin_fd;
+-	const char *props_vpn_gw, *props_cookie, *props_cacert, *props_mtu, *props_gwcert, *props_proxy;
++	const char *props_vpn_gw, *props_cookie, *props_cacert, *props_mtu, *props_gwcert;
++	const char *props_proxy, *props_user_agent;
+ 	const char *protocol;
+ 
+ 	/* Find openconnect */
+@@ -437,6 +441,7 @@ nm_openconnect_start_openconnect_binary (NMOpenconnectPlugin *plugin,
+ 	props_mtu = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_MTU);
+ 
+ 	props_proxy = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_PROXY);
++	props_user_agent = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_USER_AGENT);
+ 
+ 	openconnect_argv = g_ptr_array_new ();
+ 	g_ptr_array_add (openconnect_argv, (gpointer) (*openconnect_binary));
+@@ -470,6 +475,11 @@ nm_openconnect_start_openconnect_binary (NMOpenconnectPlugin *plugin,
+ 		g_ptr_array_add (openconnect_argv, (gpointer) props_proxy);
+ 	}
+ 
++	if (props_user_agent && strlen(props_user_agent)) {
++		g_ptr_array_add (openconnect_argv, (gpointer) "--useragent");
++		g_ptr_array_add (openconnect_argv, (gpointer) props_user_agent);
++	}
++
+ 	g_ptr_array_add (openconnect_argv, (gpointer) "--syslog");
+ 	g_ptr_array_add (openconnect_argv, (gpointer) "--cookie-on-stdin");
+ 
+@@ -719,12 +729,14 @@ int main (int argc, char *argv[])
+ 	g_option_context_parse (opt_ctx, &argc, &argv, NULL);
+ 	g_option_context_free (opt_ctx);
+ 
++	//gl.debug = TRUE;
+ 	if (getenv ("OPENCONNECT_DEBUG"))
+ 		gl.debug = TRUE;
+ 
+ 	gl.log_level = _nm_utils_ascii_str_to_int64 (getenv ("NM_VPN_LOG_LEVEL"),
+ 	                                             10, 0, LOG_DEBUG,
+ 	                                             gl.debug ? LOG_INFO : LOG_NOTICE);
++	//gl.log_level = LOG_DEBUG;
+ 
+ 	/* set logging options for helper script. */
+ 	setenv ("NM_VPN_LOG_LEVEL", nm_sprintf_buf (sbuf, "%d", gl.log_level), TRUE);
