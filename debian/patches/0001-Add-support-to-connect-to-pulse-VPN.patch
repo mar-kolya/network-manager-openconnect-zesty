@@ -8,10 +8,10 @@ Subject: Add support to connect to pulse VPN
  po/en_GB.po                               |  12 ++
  properties/nm-openconnect-dialog.ui       | 175 +++++++++++++++++++++++++++++-
  properties/nm-openconnect-editor-plugin.c |  36 ++++++
- properties/nm-openconnect-editor.c        |  48 ++++++++
+ properties/nm-openconnect-editor.c        |  44 ++++++++
  shared/nm-service-defines.h               |   3 +
  src/nm-openconnect-service.c              |  14 ++-
- 8 files changed, 296 insertions(+), 5 deletions(-)
+ 8 files changed, 292 insertions(+), 5 deletions(-)
 
 diff --git a/auth-dialog/Makefile.am b/auth-dialog/Makefile.am
 index 96a651c..b9fc086 100644
@@ -393,7 +393,7 @@ index f578000..eef4498 100644
  		 /* CSD Wrapper Script */    csd_wrapper ? csd_wrapper : "",
  		 /* User Certificate */      usercert,
 diff --git a/properties/nm-openconnect-editor.c b/properties/nm-openconnect-editor.c
-index f6cdb45..ec1f994 100644
+index f6cdb45..becd6d2 100644
 --- a/properties/nm-openconnect-editor.c
 +++ b/properties/nm-openconnect-editor.c
 @@ -316,6 +316,16 @@ init_editor_plugin (OpenconnectEditor *self, NMConnection *connection, GError **
@@ -440,7 +440,7 @@ index f6cdb45..ec1f994 100644
  	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "csd_button"));
  	if (!widget)
  		return FALSE;
-@@ -412,10 +442,28 @@ update_connection (NMVpnEditor *iface,
+@@ -412,10 +442,24 @@ update_connection (NMVpnEditor *iface,
  	if (str && strlen (str))
  		nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PROXY, str);
  
@@ -453,10 +453,6 @@ index f6cdb45..ec1f994 100644
  	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
  	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PEM_PASSPHRASE_FSID, str);
  
-+	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "prevent_invalid_cert_button"));
-+	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
-+	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_PREVENT_INVALID_CERT, str);
-+
 +	widget = GTK_WIDGET (gtk_builder_get_object (priv->builder, "firefox_button"));
 +	str = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON (widget))?"yes":"no";
 +	nm_setting_vpn_add_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE, str);
