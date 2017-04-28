@@ -71,7 +71,7 @@ index 9c95624..594437d 100644
  	_ui_data = init_ui_data(vpn_name, options, secrets, vpn_uuid);
 diff --git a/auth-dialog/nm-openconnect-auth-firefox b/auth-dialog/nm-openconnect-auth-firefox
 new file mode 100755
-index 0000000..f3e5280
+index 0000000..ab4dfde
 --- /dev/null
 +++ b/auth-dialog/nm-openconnect-auth-firefox
 @@ -0,0 +1,93 @@
@@ -127,7 +127,7 @@ index 0000000..f3e5280
 +    firefox_args.append('about:blank')
 +firefox_process = subprocess.Popen(firefox_args, stdout=subprocess.PIPE)
 +
-+time.sleep(1) # This is somewhat terrible, but we have outwait all FF internal processes before we ask it to work for us
++time.sleep(5) # This is somewhat terrible, but we have outwait all FF internal processes before we ask it to work for us
 +
 +script = """
 +gateway = '%s';
