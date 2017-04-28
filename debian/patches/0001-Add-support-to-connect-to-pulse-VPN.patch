@@ -581,7 +581,7 @@ index 08fca3b..461be82 100644
  #define NM_OPENCONNECT_KEY_CSD_WRAPPER "csd_wrapper"
  #define NM_OPENCONNECT_KEY_TOKEN_MODE "stoken_source"
 diff --git a/src/nm-openconnect-service.c b/src/nm-openconnect-service.c
-index dc82a9f..acf555d 100644
+index dc82a9f..c62a358 100644
 --- a/src/nm-openconnect-service.c
 +++ b/src/nm-openconnect-service.c
 @@ -88,8 +88,11 @@ static const ValidProperty valid_properties[] = {
@@ -640,7 +640,7 @@ index dc82a9f..acf555d 100644
  
 +	firefox_enabled = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
 +	if (firefox_enabled && !strcmp (firefox_enabled, "yes")) {
-+		return FALSE:
++		return FALSE;
 +	}
 +
  	/* We just need the WebVPN cookie, and the final IP address of the gateway
