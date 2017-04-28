@@ -1,3 +1,9 @@
+network-manager-openconnect (1.2.4-1kolya1) zesty; urgency=medium
+
+  * Add support for pulse VPN
+
+ -- Nikolay Martynov <mar.kolya@gmail.com>  Thu, 27 Apr 2017 20:39:50 -0400
+
 network-manager-openconnect (1.2.4-1) unstable; urgency=medium
 
   * New upstream version 1.2.4
