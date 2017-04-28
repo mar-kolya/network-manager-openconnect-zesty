@@ -581,7 +581,7 @@ index 08fca3b..461be82 100644
  #define NM_OPENCONNECT_KEY_CSD_WRAPPER "csd_wrapper"
  #define NM_OPENCONNECT_KEY_TOKEN_MODE "stoken_source"
 diff --git a/src/nm-openconnect-service.c b/src/nm-openconnect-service.c
-index dc82a9f..c62a358 100644
+index dc82a9f..b58a651 100644
 --- a/src/nm-openconnect-service.c
 +++ b/src/nm-openconnect-service.c
 @@ -88,8 +88,11 @@ static const ValidProperty valid_properties[] = {
@@ -634,24 +634,17 @@ index dc82a9f..c62a358 100644
  
  	g_return_val_if_fail (NM_IS_VPN_SERVICE_PLUGIN (plugin), FALSE);
  	g_return_val_if_fail (NM_IS_CONNECTION (connection), FALSE);
-@@ -567,6 +578,11 @@ real_need_secrets (NMVpnServicePlugin *plugin,
- 		return FALSE;
+@@ -578,10 +589,18 @@ real_need_secrets (NMVpnServicePlugin *plugin,
+ 		*setting_name = NM_SETTING_VPN_SETTING_NAME;
+ 		return TRUE;
  	}
- 
++
 +	firefox_enabled = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
 +	if (firefox_enabled && !strcmp (firefox_enabled, "yes")) {
 +		return FALSE;
 +	}
 +
- 	/* We just need the WebVPN cookie, and the final IP address of the gateway
- 	   (after HTTP redirects, which do happen). All the certificate/SecurID 
- 	   nonsense can be handled for us, in the user's context, by auth-dialog */
-@@ -578,10 +594,13 @@ real_need_secrets (NMVpnServicePlugin *plugin,
- 		*setting_name = NM_SETTING_VPN_SETTING_NAME;
- 		return TRUE;
- 	}
 +
-+	
  	if (!nm_setting_vpn_get_secret (s_vpn, NM_OPENCONNECT_KEY_GWCERT)) {
  		*setting_name = NM_SETTING_VPN_SETTING_NAME;
  		return TRUE;
