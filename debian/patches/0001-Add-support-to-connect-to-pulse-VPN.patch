@@ -11,8 +11,8 @@ Subject: Add support to connect to pulse VPN
  properties/nm-openconnect-editor-plugin.c |  36 ++++++
  properties/nm-openconnect-editor.c        |  44 ++++++++
  shared/nm-service-defines.h               |   3 +
- src/nm-openconnect-service.c              |  22 +++-
- 9 files changed, 393 insertions(+), 5 deletions(-)
+ src/nm-openconnect-service.c              |  23 +++-
+ 9 files changed, 394 insertions(+), 5 deletions(-)
  create mode 100755 auth-dialog/nm-openconnect-auth-firefox
 
 diff --git a/auth-dialog/Makefile.am b/auth-dialog/Makefile.am
@@ -581,7 +581,7 @@ index 08fca3b..461be82 100644
  #define NM_OPENCONNECT_KEY_CSD_WRAPPER "csd_wrapper"
  #define NM_OPENCONNECT_KEY_TOKEN_MODE "stoken_source"
 diff --git a/src/nm-openconnect-service.c b/src/nm-openconnect-service.c
-index dc82a9f..a9d5bfb 100644
+index dc82a9f..acf555d 100644
 --- a/src/nm-openconnect-service.c
 +++ b/src/nm-openconnect-service.c
 @@ -88,8 +88,11 @@ static const ValidProperty valid_properties[] = {
@@ -626,19 +626,27 @@ index dc82a9f..a9d5bfb 100644
  	g_ptr_array_add (openconnect_argv, (gpointer) "--syslog");
  	g_ptr_array_add (openconnect_argv, (gpointer) "--cookie-on-stdin");
  
-@@ -567,6 +577,11 @@ real_need_secrets (NMVpnServicePlugin *plugin,
+@@ -553,6 +563,7 @@ real_need_secrets (NMVpnServicePlugin *plugin,
+                    GError **error)
+ {
+ 	NMSettingVpn *s_vpn;
++	const char *firefox_enabled;
+ 
+ 	g_return_val_if_fail (NM_IS_VPN_SERVICE_PLUGIN (plugin), FALSE);
+ 	g_return_val_if_fail (NM_IS_CONNECTION (connection), FALSE);
+@@ -567,6 +578,11 @@ real_need_secrets (NMVpnServicePlugin *plugin,
  		return FALSE;
  	}
  
-+	firefox_enabled = nm_setting_vpn_get_data_item(s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
-+	if (value && !strcmp (value, "yes")) {
++	firefox_enabled = nm_setting_vpn_get_data_item (s_vpn, NM_OPENCONNECT_KEY_FIREFOX_ENABLE);
++	if (firefox_enabled && !strcmp (firefox_enabled, "yes")) {
 +		return FALSE:
 +	}
 +
  	/* We just need the WebVPN cookie, and the final IP address of the gateway
  	   (after HTTP redirects, which do happen). All the certificate/SecurID 
  	   nonsense can be handled for us, in the user's context, by auth-dialog */
-@@ -578,10 +593,13 @@ real_need_secrets (NMVpnServicePlugin *plugin,
+@@ -578,10 +594,13 @@ real_need_secrets (NMVpnServicePlugin *plugin,
  		*setting_name = NM_SETTING_VPN_SETTING_NAME;
  		return TRUE;
  	}
@@ -652,7 +660,7 @@ index dc82a9f..a9d5bfb 100644
  	return FALSE;
  }
  
-@@ -719,12 +737,14 @@ int main (int argc, char *argv[])
+@@ -719,12 +738,14 @@ int main (int argc, char *argv[])
  	g_option_context_parse (opt_ctx, &argc, &argv, NULL);
  	g_option_context_free (opt_ctx);
  
