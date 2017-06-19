@@ -1,0 +1,120 @@
+From: Nikolay Martynov <(none)>
+Date: Sun, 18 Jun 2017 21:07:12 -0400
+Subject: Fix python code to use nodejs script to get auth cookie
+
+---
+ auth-dialog/nm-openconnect-auth-firefox | 92 +++++++--------------------------
+ 1 file changed, 19 insertions(+), 73 deletions(-)
+
+diff --git a/auth-dialog/nm-openconnect-auth-firefox b/auth-dialog/nm-openconnect-auth-firefox
+index ab4dfde..1ea7488 100755
+--- a/auth-dialog/nm-openconnect-auth-firefox
++++ b/auth-dialog/nm-openconnect-auth-firefox
+@@ -4,33 +4,12 @@ import subprocess
+ import sys
+ import re
+ import time
++import os
+ 
+ import gi
+ gi.require_version('NM', '1.0')
+ from gi.repository import NM
+ 
+-from telnetlib import Telnet
+-
+-#FIXME Add all sorts of error handling and do not rely in timing so much
+-
+-class Mozrepl(object):
+-    def __init__(self, ip="127.0.0.1", port=4242):
+-        self.ip = ip
+-        self.port = port
+-        self.prompt = "repl>"
+-
+-    def __enter__(self):
+-        self.t = Telnet(self.ip, self.port)
+-        intro = self.t.read_until(self.prompt, 1)
+-        if not intro.endswith(self.prompt):
+-            self.prompt = re.search(r"repl\d+>", intro).group(0)
+-            print("Waited due to nonstandard prompt:", self.prompt.decode("utf8"))
+-        return self
+-
+-    def __exit__(self, type, value, traceback):
+-        self.t.close()
+-        del self.t
+-
+ connection_uuid = sys.argv[1]
+ 
+ client = NM.Client.new(None)
+@@ -40,54 +19,21 @@ vpn_settings = connection.get_setting_vpn()
+ gateway = vpn_settings.props.data.get('gateway')
+ firefox_profile = vpn_settings.props.data.get('firefox_profile')
+ 
+-port = 32123
+-
+-firefox_args = ["firefox", "--repl", "--repl", "%s" % port]
+-if firefox_profile:
+-    firefox_args.extend(["-P", firefox_profile, "--no-remote"])
+-    firefox_args.append('https://' + gateway)
+-else:
+-    firefox_args.append('about:blank')
+-firefox_process = subprocess.Popen(firefox_args, stdout=subprocess.PIPE)
+-
+-time.sleep(5) # This is somewhat terrible, but we have outwait all FF internal processes before we ask it to work for us
+-
+-script = """
+-gateway = '%s';
+-firefox_profile = '%s';
+-cookie_name = 'DSID';
+-if (firefox_profile == '') {
+-  Services.cookies.remove(gateway, cookie_name, '/', false);
+-  (function(){
+-    if (gBrowser.loadURI) {
+-      gBrowser.loadURI('https://' + gateway);
+-      return;
+-    }
+-    setTimeout(arguments.callee, 1000);
+-  })();
+-}
+-(function(){
+-    var cookies = Services.cookies.getCookiesFromHost(gateway);
+-    while (cookies.hasMoreElements()) {
+-      var cookie = cookies.getNext().QueryInterface(Ci.nsICookie2);
+-      if (cookie.name == cookie_name) {
+-        repl.print('cookie='+cookie.value);
+-        window.close();
+-        Cc['@hyperstruct.net/mozlab/mozrepl;1'].getService(Ci.nsIMozRepl).wrappedJSObject.stop();
+-        repl.quit();
+-      }
+-    }
+-    setTimeout(arguments.callee, 1000);
+-})();""" % (gateway, firefox_profile)
+-with Mozrepl(port=port) as mozrepl:
+-    mozrepl.t.write(script.replace('\n', '').encode("utf8") + "\n")
+-    response = mozrepl.t.read_all().decode("utf8")
+-    match = re.match( r'.*cookie=([a-z0-9]+)', response, re.M|re.I)
+-
+-    sys.stdout.write("cookie\nDSID=%s\n" % match.group(1));
+-    sys.stdout.write("gateway\n%s\n" % gateway);
+-    sys.stdout.write("gwcert\n\n");
+-    sys.stdout.write("\n\n");
+-    sys.stdout.flush()
+-
+-#firefox_process.terminate()
++cookie_name = 'DSID'
++
++auth_firefox = os.path.dirname(os.path.realpath(__file__)) + '/auth-firefox/index.js'
++output = subprocess.check_output(
++    [auth_firefox,
++     '--cookie', cookie_name,
++     '--gateway', 'https://' + gateway,
++     '--profile', firefox_profile])
++
++for line in output.splitlines():
++    # search for cookie:DSID=XXX
++    match = re.match( r'^cookie:' + cookie_name + '=(.*)$', line)
++    if match:
++        sys.stdout.write("cookie\nDSID=%s\n" % match.group(1));
++        sys.stdout.write("gateway\n%s\n" % gateway);
++        sys.stdout.write("gwcert\n\n");
++        sys.stdout.write("\n\n");
++        break

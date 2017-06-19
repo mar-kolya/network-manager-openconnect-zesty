@@ -1,0 +1,312 @@
+From: Nikolay Martynov <(none)>
+Date: Sun, 18 Jun 2017 21:15:16 -0400
+Subject: Run automake
+
+---
+ Makefile.in             |   9 ++--
+ auth-dialog/Makefile.in | 115 +++++++++++++++++++++++++++++++++++++++++-------
+ properties/Makefile.in  |   1 +
+ shared/Makefile.in      |   1 +
+ src/Makefile.in         |   1 +
+ 5 files changed, 108 insertions(+), 19 deletions(-)
+
+diff --git a/Makefile.in b/Makefile.in
+index 3e89de7..7019eb4 100644
+--- a/Makefile.in
++++ b/Makefile.in
+@@ -398,6 +398,7 @@ pdfdir = @pdfdir@
+ prefix = @prefix@
+ program_transform_name = @program_transform_name@
+ psdir = @psdir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -729,7 +730,7 @@ distdir: $(DISTFILES)
+ 	  ! -type d ! -perm -444 -exec $(install_sh) -c -m a+r {} {} \; \
+ 	|| chmod -R a+r "$(distdir)"
+ dist-gzip: distdir
+-	tardir=$(distdir) && $(am__tar) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).tar.gz
++	tardir=$(distdir) && $(am__tar) | GZIP=$(GZIP_ENV) gzip -c >$(distdir).tar.gz
+ 	$(am__post_remove_distdir)
+ 
+ dist-bzip2: distdir
+@@ -754,7 +755,7 @@ dist-shar: distdir
+ 	@echo WARNING: "Support for shar distribution archives is" \
+ 	               "deprecated." >&2
+ 	@echo WARNING: "It will be removed altogether in Automake 2.0" >&2
+-	shar $(distdir) | eval GZIP= gzip $(GZIP_ENV) -c >$(distdir).shar.gz
++	shar $(distdir) | GZIP=$(GZIP_ENV) gzip -c >$(distdir).shar.gz
+ 	$(am__post_remove_distdir)
+ 
+ dist-zip: distdir
+@@ -772,7 +773,7 @@ dist dist-all:
+ distcheck: dist
+ 	case '$(DIST_ARCHIVES)' in \
+ 	*.tar.gz*) \
+-	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).tar.gz | $(am__untar) ;;\
++	  GZIP=$(GZIP_ENV) gzip -dc $(distdir).tar.gz | $(am__untar) ;;\
+ 	*.tar.bz2*) \
+ 	  bzip2 -dc $(distdir).tar.bz2 | $(am__untar) ;;\
+ 	*.tar.lz*) \
+@@ -782,7 +783,7 @@ distcheck: dist
+ 	*.tar.Z*) \
+ 	  uncompress -c $(distdir).tar.Z | $(am__untar) ;;\
+ 	*.shar.gz*) \
+-	  eval GZIP= gzip $(GZIP_ENV) -dc $(distdir).shar.gz | unshar ;;\
++	  GZIP=$(GZIP_ENV) gzip -dc $(distdir).shar.gz | unshar ;;\
+ 	*.zip*) \
+ 	  unzip $(distdir).zip ;;\
+ 	esac
+diff --git a/auth-dialog/Makefile.in b/auth-dialog/Makefile.in
+index d68d168..abd7b00 100644
+--- a/auth-dialog/Makefile.in
++++ b/auth-dialog/Makefile.in
+@@ -14,6 +14,7 @@
+ 
+ @SET_MAKE@
+ 
++
+ VPATH = @srcdir@
+ am__is_gnu_make = { \
+   if test -z '$(MAKELEVEL)'; then \
+@@ -104,7 +105,7 @@ mkinstalldirs = $(install_sh) -d
+ CONFIG_HEADER = $(top_builddir)/config.h
+ CONFIG_CLEAN_FILES =
+ CONFIG_CLEAN_VPATH_FILES =
+-am__installdirs = "$(DESTDIR)$(libexecdir)"
++am__installdirs = "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(libexecdir)"
+ PROGRAMS = $(libexec_PROGRAMS)
+ am_nm_openconnect_auth_dialog_OBJECTS =  \
+ 	nm_openconnect_auth_dialog-main.$(OBJEXT)
+@@ -118,6 +119,34 @@ AM_V_lt = $(am__v_lt_@AM_V@)
+ am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
+ am__v_lt_0 = --silent
+ am__v_lt_1 = 
++am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
++am__vpath_adj = case $$p in \
++    $(srcdir)/*) f=`echo "$$p" | sed "s|^$$srcdirstrip/||"`;; \
++    *) f=$$p;; \
++  esac;
++am__strip_dir = f=`echo $$p | sed -e 's|^.*/||'`;
++am__install_max = 40
++am__nobase_strip_setup = \
++  srcdirstrip=`echo "$(srcdir)" | sed 's/[].[^$$\\*|]/\\\\&/g'`
++am__nobase_strip = \
++  for p in $$list; do echo "$$p"; done | sed -e "s|$$srcdirstrip/||"
++am__nobase_list = $(am__nobase_strip_setup); \
++  for p in $$list; do echo "$$p $$p"; done | \
++  sed "s| $$srcdirstrip/| |;"' / .*\//!s/ .*/ ./; s,\( .*\)/[^/]*$$,\1,' | \
++  $(AWK) 'BEGIN { files["."] = "" } { files[$$2] = files[$$2] " " $$1; \
++    if (++n[$$2] == $(am__install_max)) \
++      { print $$2, files[$$2]; n[$$2] = 0; files[$$2] = "" } } \
++    END { for (dir in files) print dir, files[dir] }'
++am__base_list = \
++  sed '$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;$$!N;s/\n/ /g' | \
++  sed '$$!N;$$!N;$$!N;$$!N;s/\n/ /g'
++am__uninstall_files_from_dir = { \
++  test -z "$$files" \
++    || { test ! -d "$$dir" && test ! -f "$$dir" && test ! -r "$$dir"; } \
++    || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
++         $(am__cd) "$$dir" && rm -f $$files; }; \
++  }
++SCRIPTS = $(libexec_SCRIPTS)
+ AM_V_P = $(am__v_P_@AM_V@)
+ am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
+ am__v_P_0 = false
+@@ -339,6 +368,7 @@ pdfdir = @pdfdir@
+ prefix = @prefix@
+ program_transform_name = @program_transform_name@
+ psdir = @psdir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+@@ -347,6 +377,7 @@ target_alias = @target_alias@
+ top_build_prefix = @top_build_prefix@
+ top_builddir = @top_builddir@
+ top_srcdir = @top_srcdir@
++libexec_SCRIPTS = nm-openconnect-auth-firefox
+ nm_openconnect_auth_dialog_CPPFLAGS = \
+ 	$(LIBNM_CFLAGS) \
+ 	$(GLIB_CFLAGS) \
+@@ -356,6 +387,7 @@ nm_openconnect_auth_dialog_CPPFLAGS = \
+ 	$(LIBSECRET_CFLAGS) \
+ 	-DICONDIR=\""$(datadir)/pixmaps"\" \
+ 	-DBINDIR=\""$(bindir)"\" \
++	-DLIBEXECDIR=\""$(libexecdir)"\" \
+ 	-DGNOMELOCALEDIR=\"$(datadir)/locale\" \
+ 	-I"$(top_srcdir)/shared" \
+ 	$(NULL)
+@@ -372,6 +404,7 @@ nm_openconnect_auth_dialog_LDADD = \
+ 	$(LIBSECRET_LIBS)
+ 
+ CLEANFILES = *~
++EXTRA_DIST = auth-firefox
+ all: all-am
+ 
+ .SUFFIXES:
+@@ -458,6 +491,41 @@ clean-libexecPROGRAMS:
+ nm-openconnect-auth-dialog$(EXEEXT): $(nm_openconnect_auth_dialog_OBJECTS) $(nm_openconnect_auth_dialog_DEPENDENCIES) $(EXTRA_nm_openconnect_auth_dialog_DEPENDENCIES) 
+ 	@rm -f nm-openconnect-auth-dialog$(EXEEXT)
+ 	$(AM_V_CCLD)$(LINK) $(nm_openconnect_auth_dialog_OBJECTS) $(nm_openconnect_auth_dialog_LDADD) $(LIBS)
++install-libexecSCRIPTS: $(libexec_SCRIPTS)
++	@$(NORMAL_INSTALL)
++	@list='$(libexec_SCRIPTS)'; test -n "$(libexecdir)" || list=; \
++	if test -n "$$list"; then \
++	  echo " $(MKDIR_P) '$(DESTDIR)$(libexecdir)'"; \
++	  $(MKDIR_P) "$(DESTDIR)$(libexecdir)" || exit 1; \
++	fi; \
++	for p in $$list; do \
++	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
++	  if test -f "$$d$$p"; then echo "$$d$$p"; echo "$$p"; else :; fi; \
++	done | \
++	sed -e 'p;s,.*/,,;n' \
++	    -e 'h;s|.*|.|' \
++	    -e 'p;x;s,.*/,,;$(transform)' | sed 'N;N;N;s,\n, ,g' | \
++	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1; } \
++	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
++	    if ($$2 == $$4) { files[d] = files[d] " " $$1; \
++	      if (++n[d] == $(am__install_max)) { \
++		print "f", d, files[d]; n[d] = 0; files[d] = "" } } \
++	    else { print "f", d "/" $$4, $$1 } } \
++	  END { for (d in files) print "f", d, files[d] }' | \
++	while read type dir files; do \
++	     if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
++	     test -z "$$files" || { \
++	       echo " $(INSTALL_SCRIPT) $$files '$(DESTDIR)$(libexecdir)$$dir'"; \
++	       $(INSTALL_SCRIPT) $$files "$(DESTDIR)$(libexecdir)$$dir" || exit $$?; \
++	     } \
++	; done
++
++uninstall-libexecSCRIPTS:
++	@$(NORMAL_UNINSTALL)
++	@list='$(libexec_SCRIPTS)'; test -n "$(libexecdir)" || exit 0; \
++	files=`for p in $$list; do echo "$$p"; done | \
++	       sed -e 's,.*/,,;$(transform)'`; \
++	dir='$(DESTDIR)$(libexecdir)'; $(am__uninstall_files_from_dir)
+ 
+ mostlyclean-compile:
+ 	-rm -f *.$(OBJEXT)
+@@ -590,11 +658,14 @@ distdir: $(DISTFILES)
+ 	    || exit 1; \
+ 	  fi; \
+ 	done
++	$(MAKE) $(AM_MAKEFLAGS) \
++	  top_distdir="$(top_distdir)" distdir="$(distdir)" \
++	  dist-hook
+ check-am: all-am
+ check: check-am
+-all-am: Makefile $(PROGRAMS)
++all-am: Makefile $(PROGRAMS) $(SCRIPTS)
+ installdirs:
+-	for dir in "$(DESTDIR)$(libexecdir)"; do \
++	for dir in "$(DESTDIR)$(libexecdir)" "$(DESTDIR)$(libexecdir)"; do \
+ 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
+ 	done
+ install: install-am
+@@ -651,13 +722,13 @@ info: info-am
+ 
+ info-am:
+ 
+-install-data-am:
++install-data-am: install-data-local
+ 
+ install-dvi: install-dvi-am
+ 
+ install-dvi-am:
+ 
+-install-exec-am: install-libexecPROGRAMS
++install-exec-am: install-libexecPROGRAMS install-libexecSCRIPTS
+ 
+ install-html: install-html-am
+ 
+@@ -697,28 +768,42 @@ ps: ps-am
+ 
+ ps-am:
+ 
+-uninstall-am: uninstall-libexecPROGRAMS
+-
+-.MAKE: install-am install-strip
++uninstall-am: uninstall-libexecPROGRAMS uninstall-libexecSCRIPTS
++	@$(NORMAL_INSTALL)
++	$(MAKE) $(AM_MAKEFLAGS) uninstall-hook
++.MAKE: install-am install-strip uninstall-am
+ 
+ .PHONY: CTAGS GTAGS TAGS all all-am check check-am clean clean-generic \
+ 	clean-libexecPROGRAMS clean-libtool cscopelist-am ctags \
+-	ctags-am distclean distclean-compile distclean-generic \
+-	distclean-libtool distclean-tags distdir dvi dvi-am html \
+-	html-am info info-am install install-am install-data \
+-	install-data-am install-dvi install-dvi-am install-exec \
+-	install-exec-am install-html install-html-am install-info \
+-	install-info-am install-libexecPROGRAMS install-man \
++	ctags-am dist-hook distclean distclean-compile \
++	distclean-generic distclean-libtool distclean-tags distdir dvi \
++	dvi-am html html-am info info-am install install-am \
++	install-data install-data-am install-data-local install-dvi \
++	install-dvi-am install-exec install-exec-am install-html \
++	install-html-am install-info install-info-am \
++	install-libexecPROGRAMS install-libexecSCRIPTS install-man \
+ 	install-pdf install-pdf-am install-ps install-ps-am \
+ 	install-strip installcheck installcheck-am installdirs \
+ 	maintainer-clean maintainer-clean-generic mostlyclean \
+ 	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
+ 	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
+-	uninstall-libexecPROGRAMS
++	uninstall-hook uninstall-libexecPROGRAMS \
++	uninstall-libexecSCRIPTS
+ 
+ .PRECIOUS: Makefile
+ 
+ 
++dist-hook:
++	rm -rf `find $(distdir)/auth-firefox -type d -name '~*'`
++
++install-data-local:
++	cp -Rv auth-firefox $(libexecdir)
++	chmod -R a=rX $(libexecdir)/auth-firefox
++	chmod a=rx $(libexecdir)/auth-firefox/index.js
++
++uninstall-hook:
++	rmdir $(libexecdir)/auth-firefox
++
+ # Tell versions [3.59,3.63) of GNU make to not export all variables.
+ # Otherwise a system limit (for SysV at least) may be exceeded.
+ .NOEXPORT:
+diff --git a/properties/Makefile.in b/properties/Makefile.in
+index 49566da..a7866cc 100644
+--- a/properties/Makefile.in
++++ b/properties/Makefile.in
+@@ -409,6 +409,7 @@ pdfdir = @pdfdir@
+ prefix = @prefix@
+ program_transform_name = @program_transform_name@
+ psdir = @psdir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/shared/Makefile.in b/shared/Makefile.in
+index 6d147b0..c1edf0b 100644
+--- a/shared/Makefile.in
++++ b/shared/Makefile.in
+@@ -283,6 +283,7 @@ pdfdir = @pdfdir@
+ prefix = @prefix@
+ program_transform_name = @program_transform_name@
+ psdir = @psdir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@
+diff --git a/src/Makefile.in b/src/Makefile.in
+index b41c4ed..a658dc5 100644
+--- a/src/Makefile.in
++++ b/src/Makefile.in
+@@ -347,6 +347,7 @@ pdfdir = @pdfdir@
+ prefix = @prefix@
+ program_transform_name = @program_transform_name@
+ psdir = @psdir@
++runstatedir = @runstatedir@
+ sbindir = @sbindir@
+ sharedstatedir = @sharedstatedir@
+ srcdir = @srcdir@

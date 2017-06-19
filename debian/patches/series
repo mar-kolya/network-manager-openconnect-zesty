@@ -1,1 +1,6 @@
 0001-Add-support-to-connect-to-pulse-VPN.patch
+0002-Add-nodejs-script-to-get-cookie-from-Firefox.patch
+0003-Run-npm-install-.-to-get-node-modules-installed.patch
+0004-Fix-python-code-to-use-nodejs-script-to-get-auth-coo.patch
+0005-Fix-Makefile.am-to-get-nodejs-stuff-installed.patch
+0006-Run-automake.patch

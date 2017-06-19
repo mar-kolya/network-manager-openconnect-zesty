@@ -1,0 +1,28 @@
+From: Nikolay Martynov <(none)>
+Date: Sun, 18 Jun 2017 21:14:57 -0400
+Subject: Fix Makefile.am to get nodejs stuff installed
+
+---
+ auth-dialog/Makefile.am | 12 ++++++++++++
+ 1 file changed, 12 insertions(+)
+
+diff --git a/auth-dialog/Makefile.am b/auth-dialog/Makefile.am
+index b9fc086..b161e99 100644
+--- a/auth-dialog/Makefile.am
++++ b/auth-dialog/Makefile.am
+@@ -28,3 +28,15 @@ nm_openconnect_auth_dialog_LDADD = \
+ 
+ CLEANFILES = *~
+ 
++EXTRA_DIST = auth-firefox
++
++dist-hook:
++	rm -rf `find $(distdir)/auth-firefox -type d -name '~*'`
++
++install-data-local:
++	cp -Rv auth-firefox $(libexecdir)
++	chmod -R a=rX $(libexecdir)/auth-firefox
++	chmod a=rx $(libexecdir)/auth-firefox/index.js
++
++uninstall-hook:
++	rmdir $(libexecdir)/auth-firefox

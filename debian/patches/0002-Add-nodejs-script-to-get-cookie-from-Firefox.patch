@@ -1,0 +1,186 @@
+From: Nikolay Martynov <(none)>
+Date: Sat, 17 Jun 2017 23:01:11 -0400
+Subject: Add nodejs script to get cookie from Firefox
+
+---
+ auth-dialog/auth-firefox/index.js     | 149 ++++++++++++++++++++++++++++++++++
+ auth-dialog/auth-firefox/package.json |  14 ++++
+ 2 files changed, 163 insertions(+)
+ create mode 100755 auth-dialog/auth-firefox/index.js
+ create mode 100644 auth-dialog/auth-firefox/package.json
+
+diff --git a/auth-dialog/auth-firefox/index.js b/auth-dialog/auth-firefox/index.js
+new file mode 100755
+index 0000000..df2de1c
+--- /dev/null
++++ b/auth-dialog/auth-firefox/index.js
+@@ -0,0 +1,149 @@
++#!/usr/bin/env nodejs
++
++'use strict';
++
++const VERSION = require("./package.json").version;
++const fs = require('fs');
++const program = require("commander");
++const FirefoxProfile = require("firefox-profile");
++const FirefoxRunner = require("fx-runner");
++const FirefoxConnect = require("node-firefox-connect");
++
++var remotePort = 32132;
++
++// Keep trying for about 30s
++const maxRetries = 250;
++const retryInterval = 120;
++
++const firefoxConnectDelay = 3000;
++
++const profileSettings = {
++    // Warn about possibly incorrect code.
++    "javascript.options.strict": true,
++    "javascript.options.showInConsole": true,
++
++    // Allow remote connections to the debugger.
++    "devtools.debugger.remote-enabled": true,
++    // Disable the prompt for allowing connections.
++    "devtools.chrome.enabled": true,
++    "devtools.debugger.prompt-connection": false,
++    // Show startup page by default
++    "browser.startup.page": "1"   
++};
++
++function fail(error) {
++    console.error(error);
++    process.exit();
++}
++
++function connectToFirefox(port) {
++    return new Promise((fulfill, reject) => {
++	function connect(tries) {
++	    FirefoxConnect(port).then(fulfill).catch((error) => {
++		if (error.code === "ECONNREFUSED" && tries < maxRetries) {
++		    setTimeout(() => { connect(tries + 1); }, retryInterval);
++		} else {
++		    reject("Cannot connect to Firefox: " + error);
++		}
++	    });
++	};
++	connect(0);
++    });
++}
++
++function parseCookies(cookies, name) {
++    var value = "; " + cookies;
++    var parts = value.split("; " + name + "=");
++    if (parts.length == 2) {
++	return parts.pop().split(";").shift();
++    } else {
++	return null;
++    }
++}
++
++function getCookie(tab, cookieName) {
++    return new Promise((fulfill, reject) => {
++	function get() {
++	    tab.Console.evaluateJS("document.cookie", (error, response) => {
++		if (error) {
++		    reject(error);
++		} else {
++		    if (response.exception) {
++			reject(response.exceptionMessage);
++		    } else {
++			var cookie = parseCookies(response.result, cookieName);
++			if (cookie) {
++			    fulfill(cookie);
++			} else {
++			    setTimeout(get, retryInterval);
++			}
++		    }
++		}
++	    });
++	}
++	get();
++    });
++}
++
++program
++    .version(VERSION)
++    .option("--cookie <cookie name>", "Name of cookie to look for.")
++    .option("--gateway <url>", "Url for the gateway.")
++    .option("--profile <name>", "Firefox profile name to use.")
++    .parse(process.argv);
++if (!program.cookie) {
++    fail("Cookie name is required");
++}
++if (!program.gateway) {
++    fail("Gateway url is required");
++}
++if (!program.profile) {
++    fail("Firefox profile is required");
++}
++(new FirefoxProfile.Finder()).getPath(program.profile, (error, path) => {
++    // Overwriting existing file breaks because existing file may turn out to be longer
++    try {
++	fs.unlinkSync(path + "/user.js");
++    } catch(error) {
++	// Ignore errors here
++    }
++    var profile = new FirefoxProfile({destinationDirectory: path});
++    Object.keys(profileSettings).forEach((key) => {
++	profile.setPreference(key, profileSettings[key]);
++    });
++    profile.setPreference("browser.startup.homepage", program.gateway)
++    profile.updatePreferences();
++
++    FirefoxRunner({
++	"no-remote": true,
++	"listen": remotePort,
++	"foreground": true,
++	"profile": profile.path(),
++	"verbose": true})
++	.then(function (results) {
++	    var firefox = results.process;
++
++	    firefox.on("error", fail);
++
++	    firefox.on("close", () => {
++		fail("Firefox closed");
++	    });
++
++	    // It looks like there is some race in FF, so we will wait 1s before trying to connect
++	    setTimeout(() => { 
++		connectToFirefox(remotePort).then((client) => {
++		    client.selectedTab((error, tab) => {
++			if (error) {
++			    fail(error);
++			}
++			getCookie(tab, program.cookie)
++			    .then((cookie) => {
++				console.log("cookie:DSID=" + cookie);
++				process.exit();
++			    })
++			    .catch(fail);
++		    });
++		}).catch(fail);
++	    }, firefoxConnectDelay);
++	}).catch(fail);
++});
+diff --git a/auth-dialog/auth-firefox/package.json b/auth-dialog/auth-firefox/package.json
+new file mode 100644
+index 0000000..7d5d679
+--- /dev/null
++++ b/auth-dialog/auth-firefox/package.json
+@@ -0,0 +1,14 @@
++{
++  "name": "password-getter",
++  "version": "0.0.1",
++  "description": "Scripts to get session cookies from firefox",
++  "main": "index.js",
++  "author": "Nikolay Martynov",
++  "license": "MPL-2.0",
++  "dependencies": {
++      "commander": "^2.9.0",
++      "firefox-profile": "^1.0.1",
++      "fx-runner": "^1.0.6",
++      "node-firefox-connect": "^1.2.0"
++  }
++}
