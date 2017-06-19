@@ -41,6 +41,8 @@ Description: network management framework (OpenConnect plugin core)
 Package: network-manager-openconnect-gnome
 Architecture: any
 Depends: network-manager-openconnect (= ${binary:Version}),
+	 nodejs,
+	 firefox,
          ${misc:Depends},
          ${shlibs:Depends}
 Description: network management framework (OpenConnect plugin GNOME GUI)
