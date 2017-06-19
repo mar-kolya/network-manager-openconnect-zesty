@@ -3,14 +3,14 @@ Date: Sun, 18 Jun 2017 21:14:57 -0400
 Subject: Fix Makefile.am to get nodejs stuff installed
 
 ---
- auth-dialog/Makefile.am | 12 ++++++++++++
- 1 file changed, 12 insertions(+)
+ auth-dialog/Makefile.am | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
 
 diff --git a/auth-dialog/Makefile.am b/auth-dialog/Makefile.am
-index b9fc086..cf8a25a 100644
+index b9fc086..1879661 100644
 --- a/auth-dialog/Makefile.am
 +++ b/auth-dialog/Makefile.am
-@@ -28,3 +28,15 @@ nm_openconnect_auth_dialog_LDADD = \
+@@ -28,3 +28,17 @@ nm_openconnect_auth_dialog_LDADD = \
  
  CLEANFILES = *~
  
@@ -22,7 +22,9 @@ index b9fc086..cf8a25a 100644
 +install-data-local:
 +	cp -Rv auth-firefox $(DESTDIR)$(libexecdir)
 +	chmod -R a=rX $(DESTDIR)$(libexecdir)/auth-firefox
++	chmod -R u+w $(DESTDIR)$(libexecdir)/auth-firefox
 +	chmod a=rx $(DESTDIR)$(libexecdir)/auth-firefox/index.js
++	chmod u+w $(DESTDIR)$(libexecdir)/auth-firefox/index.js
 +
 +uninstall-hook:
 +	rmdir $(libexecdir)/auth-firefox

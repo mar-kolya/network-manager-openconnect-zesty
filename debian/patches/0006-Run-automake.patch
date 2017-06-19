@@ -4,11 +4,11 @@ Subject: Run automake
 
 ---
  Makefile.in             |   9 ++--
- auth-dialog/Makefile.in | 115 +++++++++++++++++++++++++++++++++++++++++-------
+ auth-dialog/Makefile.in | 117 +++++++++++++++++++++++++++++++++++++++++-------
  properties/Makefile.in  |   1 +
  shared/Makefile.in      |   1 +
  src/Makefile.in         |   1 +
- 5 files changed, 108 insertions(+), 19 deletions(-)
+ 5 files changed, 110 insertions(+), 19 deletions(-)
 
 diff --git a/Makefile.in b/Makefile.in
 index 3e89de7..7019eb4 100644
@@ -59,7 +59,7 @@ index 3e89de7..7019eb4 100644
  	  unzip $(distdir).zip ;;\
  	esac
 diff --git a/auth-dialog/Makefile.in b/auth-dialog/Makefile.in
-index d68d168..f0e799e 100644
+index d68d168..78cdc66 100644
 --- a/auth-dialog/Makefile.in
 +++ b/auth-dialog/Makefile.in
 @@ -14,6 +14,7 @@
@@ -221,7 +221,7 @@ index d68d168..f0e799e 100644
  
  install-html: install-html-am
  
-@@ -697,28 +768,42 @@ ps: ps-am
+@@ -697,28 +768,44 @@ ps: ps-am
  
  ps-am:
  
@@ -266,7 +266,9 @@ index d68d168..f0e799e 100644
 +install-data-local:
 +	cp -Rv auth-firefox $(DESTDIR)$(libexecdir)
 +	chmod -R a=rX $(DESTDIR)$(libexecdir)/auth-firefox
++	chmod -R u+w $(DESTDIR)$(libexecdir)/auth-firefox
 +	chmod a=rx $(DESTDIR)$(libexecdir)/auth-firefox/index.js
++	chmod u+w $(DESTDIR)$(libexecdir)/auth-firefox/index.js
 +
 +uninstall-hook:
 +	rmdir $(libexecdir)/auth-firefox
