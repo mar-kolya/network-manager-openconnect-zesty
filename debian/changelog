@@ -1,3 +1,9 @@
+network-manager-openconnect (1.2.4-1kolya2) zesty; urgency=medium
+
+  * Stop using mozrepl
+
+ -- Nikolay Martynov <mar.kolya@gmail.com>  Mon, 19 Jun 2017 17:51:53 -0400
+
 network-manager-openconnect (1.2.4-1kolya1) zesty; urgency=medium
 
   * Add support for pulse VPN
