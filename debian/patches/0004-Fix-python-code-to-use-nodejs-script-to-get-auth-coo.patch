@@ -3,11 +3,11 @@ Date: Sun, 18 Jun 2017 21:07:12 -0400
 Subject: Fix python code to use nodejs script to get auth cookie
 
 ---
- auth-dialog/nm-openconnect-auth-firefox | 92 +++++++--------------------------
- 1 file changed, 19 insertions(+), 73 deletions(-)
+ auth-dialog/nm-openconnect-auth-firefox | 93 +++++++--------------------------
+ 1 file changed, 20 insertions(+), 73 deletions(-)
 
 diff --git a/auth-dialog/nm-openconnect-auth-firefox b/auth-dialog/nm-openconnect-auth-firefox
-index ab4dfde..1ea7488 100755
+index ab4dfde..c258ce5 100755
 --- a/auth-dialog/nm-openconnect-auth-firefox
 +++ b/auth-dialog/nm-openconnect-auth-firefox
 @@ -4,33 +4,12 @@ import subprocess
@@ -45,7 +45,7 @@ index ab4dfde..1ea7488 100755
  connection_uuid = sys.argv[1]
  
  client = NM.Client.new(None)
-@@ -40,54 +19,21 @@ vpn_settings = connection.get_setting_vpn()
+@@ -40,54 +19,22 @@ vpn_settings = connection.get_setting_vpn()
  gateway = vpn_settings.props.data.get('gateway')
  firefox_profile = vpn_settings.props.data.get('firefox_profile')
  
@@ -104,7 +104,8 @@ index ab4dfde..1ea7488 100755
 +
 +auth_firefox = os.path.dirname(os.path.realpath(__file__)) + '/auth-firefox/index.js'
 +output = subprocess.check_output(
-+    [auth_firefox,
++    ['nodejs',
++     auth_firefox,
 +     '--cookie', cookie_name,
 +     '--gateway', 'https://' + gateway,
 +     '--profile', firefox_profile])

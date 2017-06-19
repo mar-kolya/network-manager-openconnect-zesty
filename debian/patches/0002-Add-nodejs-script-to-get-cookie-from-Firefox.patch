@@ -6,11 +6,11 @@ Subject: Add nodejs script to get cookie from Firefox
  auth-dialog/auth-firefox/index.js     | 149 ++++++++++++++++++++++++++++++++++
  auth-dialog/auth-firefox/package.json |  14 ++++
  2 files changed, 163 insertions(+)
- create mode 100755 auth-dialog/auth-firefox/index.js
+ create mode 100644 auth-dialog/auth-firefox/index.js
  create mode 100644 auth-dialog/auth-firefox/package.json
 
 diff --git a/auth-dialog/auth-firefox/index.js b/auth-dialog/auth-firefox/index.js
-new file mode 100755
+new file mode 100644
 index 0000000..df2de1c
 --- /dev/null
 +++ b/auth-dialog/auth-firefox/index.js
