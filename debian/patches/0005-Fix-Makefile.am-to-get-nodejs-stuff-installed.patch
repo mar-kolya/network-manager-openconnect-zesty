@@ -7,7 +7,7 @@ Subject: Fix Makefile.am to get nodejs stuff installed
  1 file changed, 12 insertions(+)
 
 diff --git a/auth-dialog/Makefile.am b/auth-dialog/Makefile.am
-index b9fc086..e3e97ea 100644
+index b9fc086..d0ea326 100644
 --- a/auth-dialog/Makefile.am
 +++ b/auth-dialog/Makefile.am
 @@ -28,3 +28,15 @@ nm_openconnect_auth_dialog_LDADD = \
@@ -20,9 +20,9 @@ index b9fc086..e3e97ea 100644
 +	rm -rf `find $(distdir)/auth-firefox -type d -name '~*'`
 +
 +install-data-local:
-+	cp -Rv auth-firefox $(top_builddir)/$(libexecdir)
-+	chmod -R a=rX $(top_builddir)/$(libexecdir)/auth-firefox
-+	chmod a=rx $(top_builddir)/$(libexecdir)/auth-firefox/index.js
++	cp -Rv auth-firefox $(DESTDIR)$(libexecdir)
++	chmod -R a=rX $(DESTDIR)$(libexecdir)auth-firefox
++	chmod a=rx $(DESTDIR)$(libexecdir)auth-firefox/index.js
 +
 +uninstall-hook:
 +	rmdir $(libexecdir)/auth-firefox

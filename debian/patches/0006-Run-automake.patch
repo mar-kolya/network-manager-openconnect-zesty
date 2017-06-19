@@ -59,7 +59,7 @@ index 3e89de7..7019eb4 100644
  	  unzip $(distdir).zip ;;\
  	esac
 diff --git a/auth-dialog/Makefile.in b/auth-dialog/Makefile.in
-index d68d168..142a6e6 100644
+index d68d168..b7ea132 100644
 --- a/auth-dialog/Makefile.in
 +++ b/auth-dialog/Makefile.in
 @@ -14,6 +14,7 @@
@@ -264,9 +264,9 @@ index d68d168..142a6e6 100644
 +	rm -rf `find $(distdir)/auth-firefox -type d -name '~*'`
 +
 +install-data-local:
-+	cp -Rv auth-firefox $(top_builddir)/$(libexecdir)
-+	chmod -R a=rX $(top_builddir)/$(libexecdir)/auth-firefox
-+	chmod a=rx $(top_builddir)/$(libexecdir)/auth-firefox/index.js
++	cp -Rv auth-firefox $(DESTDIR)$(libexecdir)
++	chmod -R a=rX $(DESTDIR)$(libexecdir)auth-firefox
++	chmod a=rx $(DESTDIR)$(libexecdir)auth-firefox/index.js
 +
 +uninstall-hook:
 +	rmdir $(libexecdir)/auth-firefox
