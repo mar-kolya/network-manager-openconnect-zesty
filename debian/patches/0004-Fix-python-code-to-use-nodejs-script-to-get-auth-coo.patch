@@ -4,7 +4,9 @@ Subject: Fix python code to use nodejs script to get auth cookie
 
 ---
  auth-dialog/nm-openconnect-auth-firefox | 93 +++++++--------------------------
- 1 file changed, 20 insertions(+), 73 deletions(-)
+ po/en_GB.po                             |  2 +-
+ properties/nm-openconnect-dialog.ui     |  2 +-
+ 3 files changed, 22 insertions(+), 75 deletions(-)
 
 diff --git a/auth-dialog/nm-openconnect-auth-firefox b/auth-dialog/nm-openconnect-auth-firefox
 index ab4dfde..c258ce5 100755
@@ -119,3 +121,29 @@ index ab4dfde..c258ce5 100755
 +        sys.stdout.write("gwcert\n\n");
 +        sys.stdout.write("\n\n");
 +        break
+diff --git a/po/en_GB.po b/po/en_GB.po
+index 4a1c532..0fe8de2 100644
+--- a/po/en_GB.po
++++ b/po/en_GB.po
+@@ -5086,7 +5086,7 @@ msgid "Use _Firefox for authentication"
+ msgstr ""
+ 
+ #: ../properties/nm-openconnect-dialog.ui.h:7
+-msgid "Firefox _profile (must have mozrepl plugin installed):"
++msgid "Firefox _profile:"
+ msgstr ""
+ 
+ #: ../properties/nm-openconnect-dialog.ui.h:7
+diff --git a/properties/nm-openconnect-dialog.ui b/properties/nm-openconnect-dialog.ui
+index 1fb12bd..f350af0 100644
+--- a/properties/nm-openconnect-dialog.ui
++++ b/properties/nm-openconnect-dialog.ui
+@@ -439,7 +439,7 @@
+                     <child>
+                       <object class="GtkLabel" id="label31">
+                         <property name="visible">True</property>
+-                        <property name="label" translatable="yes">Firefox _profile (must have mozrepl plugin installed):</property>
++                        <property name="label" translatable="yes">Firefox _profile:</property>
+                         <property name="use_underline">True</property>
+                         <property name="use_markup">False</property>
+                         <property name="justify">GTK_JUSTIFY_LEFT</property>
