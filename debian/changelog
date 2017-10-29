@@ -1,3 +1,9 @@
+network-manager-openconnect (1.2.4-1kolya3) artful; urgency=medium
+
+  * Build for artful
+
+ -- Nikolay Martynov <mar.kolya@gmail.com>  Sat, 28 Oct 2017 21:40:54 -0400
+
 network-manager-openconnect (1.2.4-1kolya2) zesty; urgency=medium
 
   * Stop using mozrepl
